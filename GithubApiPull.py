@@ -20,8 +20,8 @@ def list_members(username,password,repo_url) :
      if owner == '' or repository == '':
           print('enter valid repository url')
           return
-     #r = requests.get('{2}/repos/{0}/{1}/collaborators'.format(owner,repository,api_base_url), auth=(username, password))
-     r = requests.get('{0}/repos/{1}/{2}/contributors'.format(api_base_url,owner,repository),auth=(username, password))
+     r = requests.get('{2}/repos/{0}/{1}/collaborators'.format(owner,repository,api_base_url), auth=(username, password))
+     #r = requests.get('{0}/repos/{1}/{2}/contributors'.format(api_base_url,owner,repository),auth=(username, password))
 
      if r.status_code == 200:
          data =  json.loads(r.content.decode('utf-8'))
