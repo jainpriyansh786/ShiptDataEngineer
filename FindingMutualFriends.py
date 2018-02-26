@@ -1,46 +1,57 @@
-'''
-Here I have used requests library to make a call to github's api , however we can also use curl and get the response from the api.
+import redis
 
-In the question 6 , it asks for members of repo , however I could not find documention of github api for members of repo. Members usually belong to
-oraganisation not repo. Repo has contributer and collaborators.
+# we can use redis to store connections of person as a key : value , where key is person's name and value will be set of person's friends.
+# we can then iterate over person's and use redis's sinter (set intersection) to find common connections.
+# This way we will be iterating over the person's only one time as compared to sql where we were doing cross join.
+#Redis is also fast since all the data stored is in memory as compared to sql database where there will be a lot of I/o's.
 
-I was getting error while find collaborators since I dont have push access to the given repo. However the code will be similiar. This below code is
-implementation to find number of contributers.
+class MutualFriends(object):
+
+    def __init__(self , host , port):
+ # creating connection to redis db , for simiplicity i have not added error handling.
+            self.connection = redis.StrictRedis(
+                    host=host,
+                    port=port,
+                    db=0
+                )
 
 
-'''
+    def mutual_friends(self, person1 , person2):
+        mutual_connections = self.connection.sinter(person1,person2)
 
-import requests
-import json
-def list_members(username,password,repo_url) :
-     api_base_url = 'https://api.github.com'
-     repo_attributes = repo_url.split('/')
-     owner = repo_attributes[3]
-     repository = repo_attributes[4]
-     if owner == '' or repository == '':
-          print('enter valid repository url')
-          return
-     #r = requests.get('{2}/repos/{0}/{1}/collaborators'.format(owner,repository,api_base_url), auth=(username, password))
-     r = requests.get('{0}/repos/{1}/{2}/contributors'.format(api_base_url,owner,repository),auth=(username, password))
+        return len(mutual_connections)
 
-     if r.status_code == 200:
-         data =  json.loads(r.content.decode('utf-8'))
-         print(data)
-         member_list = []
-         for i in data :
-             if i['login'] :
-                 member_list.append(i['login'])
-         return member_list
-     else:
-         print(r.status_code)
-         return None
 
-# parameter for api authentication
-api_username = 'xxx'
-api_password = 'xxx'
-repository_url = 'https://github.com/vinay-shipt/de-take-home'
-members = list_members(api_username,api_password,repository_url)
-if members :
-    print(members)
-else :
-    print('No members for the specified repository')
+    def friend_list(self, key):
+         return self.connection.smembers(key)
+
+
+
+
+    def number_of_common_connections(self):
+        common_connections = {}
+# if keys more than we can iterate the keys in batches , however here I am iterating them one by one
+        for person in self.connection.scan_iter("person:*") :
+            for friend in self.connection.scan_iter("person:*"):
+                if person == friend :
+                    continue
+                if friend+'-'+person in  common_connections  :
+                    continue
+                common_connections[person+'-'+friend] = len(self.mutual_friends())
+
+
+        return common_connections
+
+
+if __name__ == '__main__':
+    host = 'localhost'
+    port = '6667'
+
+    a = MutualFriends(host,port)
+
+    list_connection_pair = a.number_of_common_connections()
+
+
+
+
+
